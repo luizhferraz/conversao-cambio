@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Moedas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .converter-card {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #e9ecef;
+            display: none;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            display: none;
+        }
+        .swap-button {
+            background: none;
+            border: none;
+            color: #0d6efd;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .swap-button:hover {
+            transform: scale(1.1);
+        }
+        .swap-button:active {
+            transform: scale(0.95);
+        }
+        .currency-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .currency-select {
+            flex: 1;
+        }
+        .swap-button-container {
+            padding: 0 10px;
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="converter-card">
+            <h1 class="text-center mb-4">Conversor de Moedas</h1>
+            <form id="converterForm">
+                <div class="currency-container">
+                    <div class="currency-select">
+                        <label for="fromCurrency" class="form-label">De:</label>
+                        <select class="form-select" id="fromCurrency" required>
+                            <option value="USD">USD - Dólar Americano</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="BRL" selected>BRL - Real Brasileiro</option>
+                            <option value="GBP">GBP - Libra Esterlina</option>
+                            <option value="JPY">JPY - Iene Japonês</option>
+                            <option value="CNY">CNY - Yuan Chinês</option>
+                        </select>
+                    </div>
+                    
+                    <div class="swap-button-container">
+                        <button type="button" class="swap-button" id="swapButton" title="Inverter moedas">
+                            ⇄
+                        </button>
+                    </div>
+                    
+                    <div class="currency-select">
+                        <label for="toCurrency" class="form-label">Para:</label>
+                        <select class="form-select" id="toCurrency" required>
+                            <option value="USD" selected>USD - Dólar Americano</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="BRL">BRL - Real Brasileiro</option>
+                            <option value="GBP">GBP - Libra Esterlina</option>
+                            <option value="JPY">JPY - Iene Japonês</option>
+                            <option value="CNY">CNY - Yuan Chinês</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="amount" class="form-label">Valor:</label>
+                    <input type="number" class="form-control" id="amount" min="0" step="0.01" required>
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary w-100">Converter</button>
+                </div>
+            </form>
+            
+            <div class="result-box" id="resultBox">
+                <h4 class="text-center mb-3">Resultado</h4>
+                <p class="text-center mb-2" id="conversionResult"></p>
+                <p class="text-center text-muted small" id="exchangeRate"></p>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        // Função para inverter as moedas
+        document.getElementById('swapButton').addEventListener('click', () => {
+            const fromCurrency = document.getElementById('fromCurrency');
+            const toCurrency = document.getElementById('toCurrency');
+            
+            const tempValue = fromCurrency.value;
+            fromCurrency.value = toCurrency.value;
+            toCurrency.value = tempValue;
+            
+            // Se houver um resultado exibido, fazer nova conversão automaticamente
+            const resultBox = document.getElementById('resultBox');
+            if (resultBox.style.display === 'block') {
+                document.getElementById('converterForm').dispatchEvent(new Event('submit'));
+            }
+        });
+
+        document.getElementById('converterForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const resultBox = document.getElementById('resultBox');
+            const errorMessage = document.getElementById('errorMessage');
+            const fromCurrency = document.getElementById('fromCurrency').value;
+            const toCurrency = document.getElementById('toCurrency').value;
+            const amount = document.getElementById('amount').value;
+
+            resultBox.style.display = 'none';
+            errorMessage.style.display = 'none';
+
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        from: fromCurrency,
+                        to: toCurrency,
+                        amount: amount
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('conversionResult').textContent = 
+                        `${data.amount.toFixed(2)} ${data.from} = ${data.result.toFixed(2)} ${data.to}`;
+                    document.getElementById('exchangeRate').textContent = 
+                        `Taxa de câmbio: 1 ${data.from} = ${data.rate.toFixed(4)} ${data.to}`;
+                    resultBox.style.display = 'block';
+                } else {
+                    errorMessage.textContent = data.error;
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Erro ao conectar com o servidor. Tente novamente.';
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
